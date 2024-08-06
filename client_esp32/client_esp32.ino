@@ -1,32 +1,55 @@
-#include "BluetoothSerial.h"
+#include <BLEDevice.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
 
-BluetoothSerial SerialBT;
+BLEScan* pBLEScan;
+BLEAdvertisedDevice* myDevice;
+
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
+      if (advertisedDevice.haveServiceUUID() && advertisedDevice.getServiceUUID().equals(BLEUUID(SERVICE_UUID))) {
+        Serial.println("Found our device!");
+        BLEDevice::getScan()->stop();
+        myDevice = new BLEAdvertisedDevice(advertisedDevice);
+      }
+    }
+};
 
 void setup() {
   Serial.begin(115200);
-  if (!SerialBT.begin("Button_2")) { // Initialize Bluetooth with the name "Button_2"
-    Serial.println("An error occurred initializing Bluetooth");
-  } else {
-    Serial.println("Bluetooth initialized");
-  }
-  Serial.println("Attempting to connect to Button_1");
-
-  while (!SerialBT.connect("Button_1")) {
-    Serial.println("Failed to connect, retrying...");
-    delay(1000);
-  }
-
-  Serial.println("Connected to Button_1");
+  BLEDevice::init("");
+  pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true);
+  pBLEScan->start(30);
 }
 
 void loop() {
-  // Send data
-  SerialBT.println("Button_2");
-  delay(1000);
+  if (myDevice) {
+    BLEClient* pClient = BLEDevice::createClient();
+    pClient->connect(myDevice);
+    Serial.println("Connected to server");
 
-  // Read incoming data
-  if (SerialBT.available()) {
-    String receivedData = SerialBT.readString();
-    Serial.println("Received: " + receivedData);
+    BLERemoteService* pRemoteService = pClient->getService(BLEUUID(SERVICE_UUID));
+    if (pRemoteService == nullptr) {
+      Serial.print("Failed to find our service UUID: ");
+      Serial.println(SERVICE_UUID);
+      pClient->disconnect();
+      return;
+    }
+    BLERemoteCharacteristic* pRemoteCharacteristic = pRemoteService->getCharacteristic(BLEUUID(CHARACTERISTIC_UUID));
+    if (pRemoteCharacteristic == nullptr) {
+      Serial.print("Failed to find our characteristic UUID: ");
+      Serial.println(CHARACTERISTIC_UUID);
+      pClient->disconnect();
+      return;
+    }
+
+    std::string value = pRemoteCharacteristic->readValue();
+    Serial.print("Characteristic value: ");
+    Serial.println(value.c_str());
+    pClient->disconnect();
+    delay(1000);
   }
 }
