@@ -13,7 +13,7 @@ esp_now_peer_info_t peerInfo;
 
 unsigned long startMillis = 0;
 unsigned long currentMillis;
-const unsigned long interval = 3000;
+const unsigned long interval = 2000;
 
 void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
     if (!buttonPressed) {
@@ -67,6 +67,7 @@ void loop() {
     }
 
     if (digitalRead(buttonPin) == LOW && !buttonPressed && (currentMillis - startMillis >= interval) ) {
+        delay(20);
         Serial.println();
         buttonPressed = true;
         digitalWrite(ledPin, HIGH); // Turn on LED/Buzzer
