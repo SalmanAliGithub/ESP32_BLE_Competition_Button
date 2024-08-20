@@ -2,12 +2,14 @@
 #include <WiFi.h>
 
 const int buttonPin = 14; // GPIO for button
-const int ledPin = 2;     // GPIO for LED/Buzzer
+const int ledPin = 2;
+const int externalLedPin = 13;
+const int buzzerPin = 12;
 bool buttonPressed = false;
 bool receivedFirst = false;
 bool checked = false;
 
-uint8_t broadcastAddress[] = {0xA0, 0xA3, 0xB3, 0xAA, 0xFE, 0x90}; 
+uint8_t broadcastAddress[] = {0xA0, 0xA3, 0xB3, 0xAA, 0xFE, 0x90};
 
 esp_now_peer_info_t peerInfo;
 
@@ -18,6 +20,8 @@ const unsigned long interval = 2000;
 void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
     if (!buttonPressed) {
         digitalWrite(ledPin, LOW);
+        digitalWrite(externalLedPin, LOW);
+        digitalWrite(buzzerPin, LOW);
         receivedFirst = true; // The other button tapped first
         Serial.println("The other button tapped first.");
     }
@@ -26,7 +30,11 @@ void onDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 void setup() {
     pinMode(buttonPin, INPUT_PULLUP);
     pinMode(ledPin, OUTPUT);
+    pinMode(externalLedPin, OUTPUT);
+    pinMode(buzzerPin, OUTPUT);
     digitalWrite(ledPin, LOW);
+    digitalWrite(externalLedPin, LOW);
+    digitalWrite(buzzerPin, LOW);
 
     Serial.begin(115200);
     WiFi.mode(WIFI_MODE_STA);
@@ -58,6 +66,8 @@ void loop() {
 
     if (receivedFirst && (currentMillis - startMillis < interval)) {
         digitalWrite(ledPin, LOW);
+        digitalWrite(externalLedPin, LOW);
+        digitalWrite(buzzerPin, LOW);
         Serial.print(". ");
         Serial.print((currentMillis - startMillis) / 1000);
     } else if (receivedFirst && (currentMillis - startMillis >= interval)) {
@@ -70,13 +80,17 @@ void loop() {
         delay(20);
         Serial.println();
         buttonPressed = true;
-        digitalWrite(ledPin, HIGH); // Turn on LED/Buzzer
+        digitalWrite(ledPin, HIGH);
+        digitalWrite(externalLedPin, HIGH);
+        digitalWrite(buzzerPin, HIGH); // Turn on LED/Buzzer
         esp_now_send(broadcastAddress, (uint8_t *)"pressed", 7);
         Serial.println("This button tapped first.");
         receivedFirst = false;
         checked = false;
         delay(500);
         digitalWrite(ledPin, LOW);
+        digitalWrite(externalLedPin, LOW);
+        digitalWrite(buzzerPin, LOW);
     }
     buttonPressed = false;
 }

@@ -1,3 +1,0 @@
-- Time sharing of on time between the two boards to be fair
-- What if one of the two boards switches off and comes back, thsi should considered in teh algorithm
-- Green led that lights when the two are connected succesfully and shared time. This helps the host to see if they have connected right.
